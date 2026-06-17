@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clipit"
+version = "0.1.0"
+description = "Semantic topic-based video rough-cut tool"
+requires-python = ">=3.9"
+dependencies = [
+    "openai-whisper>=20240930",
+]
+optional-dependencies = { }
+
+[project.scripts]
+clipit = "clipit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["clipit*"]

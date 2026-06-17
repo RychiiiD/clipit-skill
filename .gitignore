@@ -1,0 +1,14 @@
+# Data (test files, outputs)
+/data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Local agent config (user-specific, not shared)
+.claude/settings*.json
+
+# OS
+.DS_Store
+Thumbs.db

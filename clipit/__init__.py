@@ -1,0 +1,26 @@
+"""clipit — semantic topic-based video rough-cut tool."""
+
+__version__ = "0.1.0"
+
+
+class Clipit:
+    """High-level SDK for clipit operations.
+
+    Usage:
+        c = Clipit()
+        transcript = c.transcribe("video.mp4")
+        decisions = [...]  # from Agent's LLM
+        result = c.splice("video.mp4", decisions)
+    """
+
+    def transcribe(self, video_path: str, model_name: str = "small") -> dict:
+        from .transcribe import transcribe
+        return transcribe(video_path, model_name)
+
+    def splice(self, video_path: str, decisions: list, output_path: str = None) -> str:
+        from .splice import splice
+        return splice(video_path, decisions, output_path)
+
+    def check(self) -> dict:
+        from .install import check_env
+        return check_env()
