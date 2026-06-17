@@ -24,3 +24,7 @@ class Clipit:
     def check(self) -> dict:
         from .install import check_env
         return check_env()
+
+    def clean(self, input_path: str, output_path: str = None) -> dict:
+        from .clean import clean_transcript
+        return clean_transcript(input_path, output_path)
