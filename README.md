@@ -5,134 +5,136 @@
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![PyPI](https://img.shields.io/badge/PyPI-clipit-orange)](https://pypi.org/project/clipit/)
 
-**clipit** — Semantic video rough-cut tool. Say a topic, AI understands the content, keeps relevant segments, cuts off-topic chatter/repetition/pauses.
+**clipit** — 语义主题视频粗剪工具。说一句话描述主题，AI 理解视频内容，自动保留相关片段、裁剪跑题/废话/停顿。输出是一篇结构完整的口播稿，不是零散句子的拼接。
 
-Built on the [Agent Skills open protocol](https://github.com/jina-ai/agent-skills), runs on 50+ compatible runtimes.
+基于 [Agent Skills 开放协议](https://github.com/jina-ai/agent-skills)，可在 50+ 兼容 runtime 运行。
 
 ---
 
-## Table of Contents
+## 目录
 
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Pipeline](#pipeline)
-- [CLI Reference](#cli-reference)
+- [安装](#安装)
+- [快速开始](#快速开始)
+- [管线流程](#管线流程)
+- [CLI 参考](#cli-参考)
 - [SDK](#sdk)
-- [Intensity Presets](#intensity-presets)
-- [Hard Rules (R1-R6)](#hard-rules-r1-r6)
-- [Design Philosophy](#design-philosophy)
-- [Contributing](#contributing)
-- [License](#license)
+- [强度预设](#强度预设)
+- [硬规则（R1-R6）](#硬规则r1-r6)
+- [段落重排序](#段落重排序)
+- [编码保护（Windows）](#编码保护windows)
+- [设计理念](#设计理念)
+- [贡献](#贡献)
+- [许可](#许可)
 
 ---
 
-## Installation
+## 安装
 
 ```bash
 pip install clipit
 ```
 
-Auto-install ffmpeg (if missing):
+自动安装 ffmpeg（如缺失）：
 
 ```bash
 clipit install
 ```
 
-Check environment:
+环境自检：
 
 ```bash
 clipit check
 ```
 
-Or let your Agent handle it:
+或在 Agent 中说一句：
 
 > "帮我装一下 clipit"
 
 ---
 
-## Quick Start
+## 快速开始
 
-### One-shot via Agent
+### 一句话启动（Agent）
 
 ```
 帮我粗剪这个视频，主题是远程求职技巧
 ```
 
-The Agent handles the full pipeline: transcribe → analyze → validate → confirm → splice.
+Agent 自动执行完整管线：转字幕 → 清洗 → 语义分析 → 验证 → 确认 → 拼接。
 
-### Step by step
+### 分步执行
 
 ```bash
-# 1. Transcribe audio to text
+# 1. 转字幕
 clipit transcribe demo.mp4 -o data/process-data/transcript.json
 
-# 2. Clean transcript (remove filler words, stutters, repeats)
+# 2. 清洗字幕（去填充词/重复/卡顿）
 clipit clean data/process-data/transcript.json -o data/process-data/transcript_clean.json
 
-# 3. Semantic analysis (LLM generates keep/cut decisions)
-#    → Handled by your Agent's own LLM, not by clipit
+# 3. 语义分析（LLM 逐段判断保留/裁剪）
+#    → 由 Agent 自身 LLM 完成，非 clipit 内置
 
-# 4. Validate decisions with hard rules
+# 4. 硬规则验证
 clipit validate data/process-data/decisions.json -i medium
 
-# 5. Splice output video
+# 5. 拼接输出视频
 clipit splice demo.mp4 -d data/process-data/decisions.json -o output.mp4
 
-# Optional: reorder segments by narrative flow instead of chronology
+# 可选：按叙事逻辑重排段落（非时间顺序）
 clipit splice demo.mp4 -d data/process-data/decisions.json --reorder -o output.mp4
 ```
 
-### Adjust intensity via natural language
+### 自然语言调参
 
-| You say | Effect |
-|---------|--------|
+| 你说 | 效果 |
+|------|------|
 | "剪严格一点" | intensity → strict |
 | "宽松点，别剪太多" | intensity → loose |
 | "保留片段别短于 3 秒" | min_keep → 3.0 |
 
 ---
 
-## Pipeline
+## 管线流程
 
 ```
-Input: video file + topic description
+输入：视频文件 + 主题描述
   │
-  ├─ Step 1: Intent extraction          NL → video_path + topic + intensity
-  ├─ Step 2: Transcribe                 Whisper → transcript.json
-  ├─ Step 2.5: Clean transcript         Remove filler/stutter/repeat → transcript_clean.json
-  ├─ Step 3: Semantic analysis          LLM reads transcript, generates decisions.json
-  ├─ Step 3.5: Hard rule validation     clipit validate — R1-R6, code-enforced
-  ├─ Step 4: User confirmation          Preview keep/cut summary, confirm/adjust/cancel
-  ├─ Step 5: Splice                     ffmpeg concatenation → output video
-  └─ Step 6: Report                     Duration comparison + output path
+  ├─ Step 1: 意图提取          NL → video_path + topic + intensity
+  ├─ Step 2: 转字幕             Whisper → transcript.json
+  ├─ Step 2.5: 字幕清洗         去填充词/重复/卡顿 → transcript_clean.json
+  ├─ Step 3: 语义分析           LLM 阅读字幕，生成 decisions.json
+  ├─ Step 3.5: 硬规则验证        clipit validate — R1-R6，代码强制
+  ├─ Step 4: 用户确认           展示裁剪预览，确认/调参/取消
+  ├─ Step 5: 拼接               ffmpeg 拼接 → 输出视频
+  └─ Step 6: 报告               时长对比 + 输出路径
 ```
 
-### Data layout
+### 数据目录
 
 ```
 data/
 ├── process-data/
-│   ├── transcript.json           ← Step 2 output (raw)
-│   ├── transcript_clean.json     ← Step 2.5 output (cleaned)
-│   └── decisions.json            ← Step 3 output (LLM decisions)
+│   ├── transcript.json           ← Step 2 原始字幕
+│   ├── transcript_clean.json     ← Step 2.5 清洗后字幕
+│   └── decisions.json            ← Step 3 LLM 裁剪决策
 └── output/
-    └── <video>_output.mp4        ← Step 5 output
+    └── <视频>_output.mp4         ← Step 5 输出
 ```
 
 ---
 
-## CLI Reference
+## CLI 参考
 
-| Command | Description | Output |
-|---------|-------------|--------|
-| `clipit check` | Environment self-check (Python/ffmpeg/whisper/PATH) | JSON + stderr |
-| `clipit install` | Auto-install ffmpeg | JSON |
-| `clipit transcribe <video> -o <json>` | Speech-to-text via Whisper | JSON |
-| `clipit clean <json> -o <json>` | Clean transcript text | JSON |
-| `clipit validate <json> -i <intensity>` | Hard rule validation | JSON |
-| `clipit splice <video> -d <json> -o <mp4> [--reorder]` | Concatenate keep segments | JSON |
+| 命令 | 功能 | 输出 |
+|------|------|------|
+| `clipit check` | 环境自检（Python/ffmpeg/whisper/PATH） | JSON + stderr |
+| `clipit install` | 自动安装 ffmpeg | JSON |
+| `clipit transcribe <video> -o <json>` | 语音转字幕（Whisper） | JSON |
+| `clipit clean <json> -o <json>` | 清洗字幕文本 | JSON |
+| `clipit validate <json> -i <强度>` | 硬规则验证（R1-R6） | JSON |
+| `clipit splice <video> -d <json> -o <mp4> [--reorder]` | 按决策拼接视频 | JSON |
 
-All commands output JSON for Agent platform consumption.
+所有命令输出 JSON，Agent 平台解析后展示给用户。
 
 ---
 
@@ -141,46 +143,46 @@ All commands output JSON for Agent platform consumption.
 ```python
 from clipit import Clipit
 
-# Validate decisions
+# 验证决策
 result = Clipit.validate("decisions.json", output_path="decisions_fixed.json", intensity="aggressive")
-print(result["changes"])  # audit trail of fixes
+print(result["changes"])  # 审计追踪
 print(result["stats"])    # keep_dur, cut_dur, keep_pct
 
-# Splice video
+# 拼接视频
 path = Clipit.splice("demo.mp4", decisions_list, output_path="output.mp4", reorder=True)
 ```
 
 ---
 
-## Intensity Presets
+## 强度预设
 
-| Preset | max_cut_pct | min_keep | keep_max | min_avg_keep | max_gap | Use case |
-|--------|-------------|----------|----------|--------------|---------|----------|
-| loose | 50% | 2.0s | 20 | 3.0s | 1.5s | Light trimming, obvious off-topic only |
-| medium | 70% | 1.0s | 15 | 4.0s | 2.0s | General rough-cut (default) |
-| strict | 85% | 0.5s | 12 | 5.0s | 2.5s | Precision editing |
-| aggressive | 92% | 0.3s | 10 | 6.0s | 3.0s | Maximum extraction from long videos |
+| 预设 | max_cut_pct | min_keep | keep_max | min_avg_keep | max_gap | 适用场景 |
+|------|-------------|----------|----------|--------------|---------|---------|
+| loose | 50% | 2.0s | 20 | 3.0s | 1.5s | 宽松裁剪，仅去明显废话 |
+| medium | 70% | 1.0s | 15 | 4.0s | 2.0s | 一般粗剪（默认） |
+| strict | 85% | 0.5s | 12 | 5.0s | 2.5s | 精编式裁剪 |
+| aggressive | 92% | 0.3s | 10 | 6.0s | 3.0s | 极少量精华提取 |
 
-When extracting a small fraction (<15%) from a long video (>20min), use `aggressive` to prevent R3 from restoring marginal content.
+从长视频（>20min）提取少量精华（<15%）时使用 aggressive，避免 R3 恢复不必要的内容。
 
 ---
 
-## Hard Rules (R1-R6)
+## 硬规则（R1-R6）
 
-LLM decisions are unreliable. clipit enforces deterministic rules that AI cannot override:
+LLM 不可靠，clipit 用代码强制修正语义分析的输出，AI 不可覆盖：
 
-| Rule | Description |
-|------|-------------|
-| **R1** 开篇定题 | Protect opening topic statement (2-20s only; short fillers and long banter left as-cut). If first keep < 3s, also protect next segment. |
-| **R2** 短段合并 | Merge keep segments shorter than `min_keep` into neighbor or extend into adjacent cut. |
-| **R3** 裁剪上限 | Total cut ratio capped by intensity preset. Restore marginal cuts by reason priority (跑题 → 例子过长 → 内容重复 → 空白停顿). |
-| **R4** 同动作去重 | Merge adjacent same-action segments. |
-| **R5** Reason 校验 | Force keep to "内容保留"; cut to one of 4 standard values. Ensures R3 priority sort reliability. |
-| **R6** 流畅度防护 | When keep segments are too many or too short: remove isolated islands (<3s with cuts both sides), bridge short gaps (<max_gap). |
+| 规则 | 说明 |
+|------|------|
+| **R1** 开篇定题 | 保护开篇主题句（仅 2-20s；短填充和长前摇不保）。首段 keep < 3s 时连保下一段 |
+| **R2** 短段合并 | keep 段短于 `min_keep` 合并到相邻段落或向 cut 扩展 |
+| **R3** 裁剪上限 | 裁剪比例不超过强度阈值，超限时按 reason 优先级恢复 |
+| **R4** 同动作去重 | 相邻同动作段自动合并 |
+| **R5** Reason 校验 | 强制 reason 标准化：keep 只能"内容保留"，cut 限 4 种标准值 |
+| **R6** 流畅度防护 | keep 段过多/过短时裁孤立岛（<3s 两头切），桥接短间隙（<max_gap） |
 
-The engine preserves unknown fields (e.g. `order`) from decisions through all rules.
+引擎在 rules 处理中 preserve 所有未知字段（如 `order`）。
 
-### Output format
+### 验证输出格式
 
 ```json
 {
@@ -199,60 +201,60 @@ The engine preserves unknown fields (e.g. `order`) from decisions through all ru
 
 ---
 
-## Segment Reordering
+## 段落重排序
 
-By default, splice concatenates segments chronologically. When a key topic sentence appears late in the video but should open the output, you can add an optional `order` field to keep segments:
+默认按原始时间顺序拼接。当主题金句出现在视频后半段但应该是口播开场时，可为 keep 段添加 `order` 字段：
 
 ```json
 {"start": 465.7, "end": 477.7, "action": "keep", "reason": "内容保留", "order": 1}
 {"start": 382.5, "end": 395.3, "action": "keep", "reason": "内容保留", "order": 2}
 ```
 
-Pass `--reorder` to splice to sort by `order` instead of `start` time. The default is chronological. Users are informed of the tradeoff (visual discontinuity) and choose explicitly.
+拼接时加 `--reorder` 即可按 order 而非 start 时间排序。默认为时间顺序，用户知情选择（会有视觉跳变）。
 
 ---
 
-## Encoding Guard (Windows)
+## 编码保护（Windows）
 
-Windows terminals use GBK encoding by default. clipit handles this with a three-layer defense:
+Windows 终端默认 GBK 编码，clipit 三层兜底：
 
-1. `-o/--output` flag writes files directly, bypassing stdout redirection
-2. `_ensure_utf8()` forces stdout reconfigure to UTF-8
-3. `_print()` falls back to raw UTF-8 bytes on UnicodeEncodeError
+1. `-o/--output` 直接写文件，绕过 stdout 重定向
+2. `_ensure_utf8()` 强制 stdout reconfigure 为 UTF-8
+3. `_print()` 遇到 UnicodeEncodeError 时降级写 raw UTF-8 字节到 buffer
 
-macOS/Linux users are unaffected.
-
----
-
-## Design Philosophy
-
-### Semantic analysis is decentralized
-
-clipit core does local audio/video processing only (Whisper + ffmpeg). Semantic analysis is done by the Agent's own LLM — no API key configuration needed. This naturally adapts to all Agent platforms.
-
-### Single source of truth
-
-`.agents/skills/clipit/SKILL.md` is the canonical specification. Product behavior, prompts, and pipeline are defined there. All other files are derived copies.
-
-### Code enforcement over LLM prompts
-
-Semantic understanding is the LLM's job. Structural consistency is code's job. R1-R6 are enforced by code and cannot be overridden by AI — no matter how clever the prompt.
-
-### Complete narrative, not sentence fragments
-
-The LLM does not classify sentences individually. It treats the transcript as source material for writing a complete broadcast script: opening hook → argument → evidence → case study → methodology → conclusion.
+macOS/Linux 无此问题，保护逻辑无害通过。
 
 ---
 
-## Contributing
+## 设计理念
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feat/my-feature`)
-3. Commit changes (`git commit -am 'feat: add my feature'`)
-4. Push to branch (`git push origin feat/my-feature`)
-5. Open a Pull Request
+### 语义分析去中心化
 
-### Development setup
+clipit core 只做本地音视频处理（Whisper + ffmpeg）。语义分析由 Agent 自身的 LLM 完成——不配置任何 API Key。天然适配所有 Agent 平台。
+
+### 单源真理
+
+`.agents/skills/clipit/SKILL.md` 是唯一规范源。产品行为、提示词、管线流程都定义在其中。其他文件是副本，需手动同步。
+
+### 代码大于提示词
+
+语义理解是 LLM 的职责，结构一致性是代码的职责。R1-R6 由代码强制，AI 不可覆盖——不管 prompt 写得多聪明。
+
+### 交付口播，不是零散句子
+
+LLM 不是逐句分类，而是从"写一篇完整口播稿"的角度做精编：开头钩子 → 论点 → 论据 → 案例 → 方法论 → 结论。按段落粒度切分，3-8 段，每段 ≥5s。
+
+---
+
+## 贡献
+
+1. Fork 本仓库
+2. 创建功能分支（`git checkout -b feat/my-feature`）
+3. 提交修改（`git commit -am 'feat: add my feature'`）
+4. 推送分支（`git push origin feat/my-feature`）
+5. 发起 Pull Request
+
+### 开发环境
 
 ```bash
 git clone https://github.com/RychiiiD/clipit-skill.git
@@ -260,15 +262,19 @@ cd clipit-skill
 pip install -e .
 ```
 
-### Guidelines
+### 开发规范
 
-- **Single source of truth**: Edit `.agents/skills/clipit/SKILL.md`, then sync to `.claude/skills/clipit/SKILL.md`
-- **No test data in code**: Don't hardcode test video content in examples or documentation
-- **All CLI output is JSON**: Stdout/stderr separation for Agent platform consumption
-- **Code over prompts**: If a rule can be enforced by code, don't rely on LLM compliance
+- **单源真理**：编辑 `.agents/skills/clipit/SKILL.md`，然后同步到 `.claude/skills/clipit/SKILL.md`
+- **不硬编码测试数据**：不在文档和代码中保留具体视频内容
+- **所有 CLI 输出 JSON**：stdout/stderr 分离，供 Agent 平台消费
+- **代码大于提示词**：能用代码强制就不用 LLM 自觉
 
 ---
 
-## License
+## 许可
 
 MIT
+
+---
+
+[English README](README_EN.md)
