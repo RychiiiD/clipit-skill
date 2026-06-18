@@ -16,7 +16,7 @@ Say a topic, AI handles it in minutes.<br>
 <br>
 Auto-trims rambles, removes fillers, reorders key points, keeps case studies intact,<br>
 delivering a coherent short video with a proper opening and conclusion.<br>
-**One source video, each theme independently produces its own short.**
+**One source video, each theme independently produces its own short. Multiple short videos can also be composed into one topic video.**
 
 <sub>Powered by the [Agent Skills protocol](https://github.com/jina-ai/agent-skills), compatible with 50+ runtimes.</sub>
 
@@ -91,6 +91,9 @@ In short: **LLM handles judgment, code handles correctness.** When the AI gets i
 ### Other differentiators
 
 - **Multi-theme extraction** — One live stream recording, each theme independently analyzed to produce its own complete short. Themes can be closely related (different angles on the same concept) or completely independent. Actual results depend on whether the source video has enough content to support each theme
+- **Multi-video composition** — Combine multiple independent short videos into one topic video; each keep segment can reference a different source file
+- **Paragraph reordering** — Reorder segments by narrative logic rather than chronology, putting key statements first
+- **Local-first** — Video files stay on your machine. Nothing uploaded to any cloud or third-party service
 - **Zero API keys** — No vendor lock-in, uses your Agent platform's own LLM
 - **Cross-platform** — Based on the Agent Skills protocol, works with Claude Code, Cursor, 50+ runtimes
 
@@ -110,11 +113,12 @@ In short: **LLM handles judgment, code handles correctness.** When the AI gets i
 ## How It Works
 
 - **Transcribe** — Whisper extracts video subtitles
-- **Clean** — Remove fillers, stutters, sentence-start stammering
+- **Clean** — Remove fillers, stutters, sentence-start stammering (Chinese + English)
 - **Semantic analysis** — **LLM** edits from a "complete broadcast script" perspective, per-theme analysis
-- **Validation** — R1-R6 code-enforced hard rules, AI cannot override
+- **Paragraph reordering** — Move key statements to the front, arrange by narrative logic instead of chronology
+- **Validation** — R1-R6 code-enforced hard rules, AI cannot override. 4 intensity presets (loose/medium/strict/aggressive)
 - **User confirmation** — Preview the cut, confirm before execution
-- **Splice** — ffmpeg concat into final video
+- **Splice** — ffmpeg concat into final video. Supports single-video trimming and multi-video composition
 
 ---
 
