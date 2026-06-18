@@ -5,13 +5,20 @@ import re
 CLEAN_RULES = [
     # 1) Repeated words: "就，就是" → "就是", "他，他们" → "他们"
     (re.compile(r'(\S+)[，,、]\s*\1'), r'\1'),
-    # 2) Filler words at start
+    # 1e) English stutter: "the the" → "the", "and and" → "and"
+    (re.compile(r'^(\w{2,})\s+\1\b', re.IGNORECASE), r'\1'),
+    # 2) Chinese filler words at start
     (re.compile(r'^(嗯|呃|啊|哦|哎|哟|嘛|啦|咯)\s*'), ''),
     (re.compile(r'^(就是|这个|那个|然后|反正|所以说|就是说|那那么|那么)\s*'), ''),
+    # 2e) English filler words at start
+    (re.compile(r'^(um|uh|er|ah)\s+', re.IGNORECASE), ''),
+    (re.compile(r'^(like|well|actually|basically|literally|honestly|you know|i mean|sort of|kind of)\s+', re.IGNORECASE), ''),
     # 3) Stutter at start: "所以... 所以我认为" → "所以我认为"
     (re.compile(r'^(.{2,4})[.。、，,]\s*\1'), r'\1'),
-    # 4) Trailing filler
+    # 4) Chinese trailing filler
     (re.compile(r'\s*(嗯|呃|啊|哦|好吧|对吧|是吧|对不对)$'), ''),
+    # 4e) English trailing filler
+    (re.compile(r'\s*(right|okay|yeah|you know)$', re.IGNORECASE), ''),
 ]
 
 

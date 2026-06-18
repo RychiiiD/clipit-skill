@@ -2,23 +2,27 @@
 
 # 🎬 clipit-skill
 
-> **Spending 40 minutes dragging a timeline to trim a 20-minute video?**  
-> **Say a topic, AI cuts it in minutes.**
+> **Rough-cutting the first draft shouldn't take your time.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Agent Skills](https://img.shields.io/badge/Agent%20Skills-v1-blue)](https://github.com/jina-ai/agent-skills)
+[![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-blue)](https://agentskills.io)
+[![skills.sh](https://img.shields.io/badge/skills.sh-Compatible-blue)](https://skills.sh)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/)
 
 <br>
 
-Turns long live streams and broadcast recordings into<br>
-topic-focused short clips — auto-trimming off-topic rambles,<br>
-filler talk, and awkward pauses.<br>
+40 minutes dragging a timeline for a rough cut?<br>
+Say a topic, AI handles it in minutes.<br>
+<br>
+Auto-trims rambles, removes fillers, reorders key points, keeps case studies intact,<br>
+delivering a coherent short video with a proper opening and conclusion.<br>
 **One source video, each theme independently produces its own short.**
 
-<sub>Built on the [Agent Skills open protocol](https://github.com/jina-ai/agent-skills), works with 50+ compatible runtimes.</sub>
+<sub>Powered by the [Agent Skills protocol](https://github.com/jina-ai/agent-skills), compatible with 50+ runtimes.</sub>
 
-[Quick Start](#quick-start) · [Install](#install) · [Why It's Different](#why-its-different) · [How It Works](#how-it-works)
+[Quick Start](#quick-start) · [Install](#install) · [vs Traditional Tools](#vs-traditional-tools) · [Who It's For](#who-its-for)
+
+[中文](README.md) · **English**
 
 </div>
 
@@ -26,13 +30,21 @@ filler talk, and awkward pauses.<br>
 
 ## Install
 
-Tell your Agent:
+**Option 1: One-sentence install (recommended, cross-runtime)**
+
+Tell your Agent (Claude Code, Cursor, Codex, OpenClaw, Gemini CLI, etc.):
 
 ```
-帮我安装 clipit-skill：https://github.com/RychiiiD/clipit-skill.git
+帮我安装这个 skill：https://github.com/RychiiiD/clipit-skill
 ```
 
-The Agent handles the full installation automatically.
+**Option 2: Universal CLI installer (supports 55+ runtimes)**
+
+```bash
+npx skills add RychiiiD/clipit-skill
+```
+
+It auto-detects your current runtime and places the skill in the correct directory. Use `-a claude-code` / `-a cursor` etc. to specify a runtime if needed.
 
 > Prerequisite: Agent runtime must be compatible with the [Agent Skills protocol](https://github.com/jina-ai/agent-skills).
 
@@ -42,51 +54,45 @@ The Agent handles the full installation automatically.
 
 | Requirement | Description |
 |-------------|-------------|
-| **Python 3.9+** | clipit core and Whisper require Python runtime |
+| **Python 3.9+** | clipit core and Whisper require Python |
 | **ffmpeg** | Video splicing depends on ffmpeg (`clipit install` handles auto-install) |
 | **Shell access** | Agent platform must be able to run shell commands |
 | **Local file access** | Agent platform must read/write local files |
 
-Semantic analysis is handled by the Agent platform's own LLM — **no API key required**.
+Semantic analysis uses your Agent platform's own LLM — **no API key required**.
 
 ---
 
 ## Quick Start
 
+No commands to learn. No parameters to configure. Just say it:
+
 ```
-帮我粗剪这个视频，主题是远程求职技巧
+clipit: rough-cut this video, topic is remote job hunting tips
+clipit: rough-cut this video, topic 1 is making money, topic 2 is first principles thinking
 ```
 
-No commands to learn. No parameters to configure.
-
-| You say | Effect |
-|---------|--------|
-| "剪严格一点" | Precision mode |
-| "宽松点" | Loose mode |
-| "保留片段别短于 3 秒" | Adjust params |
+> Notes: Video must be a **local file**. Provide a **clear topic** for each cut.
 
 ---
 
-## Why It's Different
+## vs Traditional Tools
 
-Most "smart editing" tools do nothing but **silence detection** — mechanically removing pauses without understanding the content.
+Most "smart editing" tools do nothing but **silence detection** — mechanically removing pauses. clipit redefines "smart" with three layers:
 
-clipit's different by design, with three layers:
+| Dimension | Traditional silence detection | clipit |
+|-----------|------------------------------|--------|
+| **Content understanding** | ❌ Detects silence only | ✅ LLM understands topic relevance and narrative flow |
+| **Cutting logic** | Deletes all pauses mechanically | Script-first, edits toward a complete broadcast script, preserving full argument chains and case arcs |
+| **Quality guarantee** | None | R1-R6 hard rules enforced by code, AI cannot override |
 
-| Layer | Role | Handled by |
-|-------|------|------------|
-| **Semantic understanding** | Understands what the video is about, decides what's on-topic vs off-topic | LLM |
-| **Hard rule guard** | Opening must hook the topic, short segments auto-merged, cut ratio capped — code enforced, AI cannot override | clipit validate |
-| **AV processing** | Transcribe, clean fillers, splice output | clipit core |
-
-**LLM handles judgment, code handles correctness.** When the AI gets it wrong, the rules pull it back.
+In short: **LLM handles judgment, code handles correctness.** When the AI gets it wrong, the rules pull it back.
 
 ### Other differentiators
 
-- **Script-first** — Not sentence-by-sentence trimming, but crafting a complete broadcast script with opening, arguments, cases, and conclusion
-- **Multi-theme extraction** — One live stream, each theme independently analyzed to produce its own complete short. Themes can be closely related (different angles on the same concept) or completely independent (two unrelated topics from the same stream). Actual results depend on whether the source video has enough content to support each theme
+- **Multi-theme extraction** — One live stream recording, each theme independently analyzed to produce its own complete short. Themes can be closely related (different angles on the same concept) or completely independent. Actual results depend on whether the source video has enough content to support each theme
 - **Zero API keys** — No vendor lock-in, uses your Agent platform's own LLM
-- **Cross-platform** — Agent Skills protocol, works with Claude Code, Cursor, 50+ runtimes
+- **Cross-platform** — Based on the Agent Skills protocol, works with Claude Code, Cursor, 50+ runtimes
 
 ---
 
@@ -94,41 +100,65 @@ clipit's different by design, with three layers:
 
 | If you | clipit helps you |
 |--------|-----------------|
-| Create talking-head videos | Auto-remove rambles, keep core points |
+| Create talking-head videos | Auto-remove rambles and off-topic content, keep core arguments |
 | Have live stream recordings | Clip topic-focused shorts from hours of footage |
 | Produce course content | Extract knowledge segments from long recordings |
-| Manage multi-platform distribution | One source, multiple themed outputs |
+| Manage multi-platform distribution | One source video, multiple themed outputs |
 
 ---
 
 ## How It Works
 
-| Step | Handled by |
-|------|------------|
-| Transcribe | Whisper STT |
-| Clean | Remove fillers, stutters, repeats |
-| Semantic Analysis | **LLM** — writes a complete broadcast script, per theme |
-| Validation | Code-enforced rules, AI cannot override |
-| User Confirmation | Preview then confirm |
-| Splice | ffmpeg concat into final video |
+- **Transcribe** — Whisper extracts video subtitles
+- **Clean** — Remove fillers, stutters, sentence-start stammering
+- **Semantic analysis** — **LLM** edits from a "complete broadcast script" perspective, per-theme analysis
+- **Validation** — R1-R6 code-enforced hard rules, AI cannot override
+- **User confirmation** — Preview the cut, confirm before execution
+- **Splice** — ffmpeg concat into final video
 
 ---
 
 ## Scope
 
-clipit is a **semantic rough-cut tool** producing semi-finished material. Final polish is up to your editing tool:
+clipit is a **semantic rough-cut tool** producing semi-finished material. Fine editing is left to your familiar tools:
 
-| Not included | Description |
-|-------------|-------------|
-| Fine editing | Frame-level manual adjustments |
-| Transitions/effects | Crossfades, filters |
-| Text overlays | Subtitles styling, animations |
-| Color grading | Color correction, beauty filters |
-| Audio processing | Noise reduction, background music |
-| Multi-track editing | PiP, split screen |
+- **Fine editing** — Frame-level manual adjustments
+- **Transitions/effects** — Crossfades, filters
+- **Text overlays** — Subtitle styling, animations
+- **Color grading** — Color correction, beauty filters
+- **Audio processing** — Noise reduction, background music
+- **Multi-track editing** — PiP, split screen
 
 ---
 
-## License
+## Repo Structure
 
-MIT
+```
+clipit-skill/
+├── .agents/skills/clipit/SKILL.md    ← Skill spec (single source of truth)
+├── .claude/                          ← Claude Code copy
+├── clipit/                           ← Python core package (CLI + logic)
+├── data/                             ← Process files and output
+├── CLIPIT_PRD.md                     ← Product requirements doc
+├── README.md / README_EN.md          ← Documentation
+├── LICENSE                           ← MIT license
+├── pyproject.toml                    ← Project config
+└── requirements.txt                  ← Python dependencies
+```
+
+---
+
+## About the Author
+
+An aspiring AI PM, 5 years of web front-end development.
+
+Trying to make things that make the working day a little easier.
+
+---
+
+<div align="center">
+
+MIT License © RychiiiD
+
+</div>
+

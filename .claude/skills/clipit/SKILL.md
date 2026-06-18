@@ -1,6 +1,7 @@
 ---
 name: clipit
-description: clipit — 语义主题视频粗剪。说一句话，AI 理解内容，自动裁剪跑题/废话/停顿
+description: clipit — semantic topic-based video rough-cut tool. Say a topic, AI understands the content, auto-trims off-topic segments, and produces a coherent short video.
+license: MIT
 ---
 
 说一句话就开始：
