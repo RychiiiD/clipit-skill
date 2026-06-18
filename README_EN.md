@@ -120,7 +120,7 @@ In short: **LLM handles judgment, code handles correctness.** When the AI gets i
 
 ## Scope
 
-clipit is a **semantic rough-cut tool** producing semi-finished material. Fine editing is left to your familiar tools:
+clipit is a **semantic rough-cut tool** that saves you the most time-consuming part — content trimming and structuring. It produces semi-finished material, then you fine-tune with your familiar editing tools:
 
 - **Fine editing** — Frame-level manual adjustments
 - **Transitions/effects** — Crossfades, filters

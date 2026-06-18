@@ -10,16 +10,17 @@ class Clipit:
         c = Clipit()
         transcript = c.transcribe("video.mp4")
         decisions = [...]  # from Agent's LLM
-        result = c.splice("video.mp4", decisions)
+        result = c.splice("video.mp4", decisions)       # single video
+        result = c.splice(["v1.mp4", "v2.mp4"], decisions)  # multi-video
     """
 
     def transcribe(self, video_path: str, model_name: str = "small") -> dict:
         from .transcribe import transcribe
         return transcribe(video_path, model_name)
 
-    def splice(self, video_path: str, decisions: list, output_path: str = None) -> str:
+    def splice(self, video_paths, decisions: list, output_path: str = None) -> str:
         from .splice import splice
-        return splice(video_path, decisions, output_path)
+        return splice(video_paths, decisions, output_path)
 
     def check(self) -> dict:
         from .install import check_env
