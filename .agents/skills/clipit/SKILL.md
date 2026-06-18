@@ -117,6 +117,37 @@ clipit clean data/process-data/transcript.json -o data/process-data/transcript_c
 
 将生成的决策 JSON 保存到 `data/process-data/decisions.json`。
 
+### Step 3.5 — 硬规则验证
+
+LLM 不可靠，clipit 用代码强制规则修正 LLM 决策：
+
+```bash
+clipit validate data/process-data/decisions.json -i <intensity>
+```
+
+强制规则（**AI 不可覆盖**）：
+
+| 规则 | 说明 |
+|------|------|
+| R1 首句保护 | 第一段强制保留，AI 无权裁剪 |
+| R2 短段合并 | keep 片段 < min_keep 自动合并/扩展 |
+| R3 裁剪上限 | 总裁剪比例不超过 intensity 阈值，超限时恢复边缘段落 |
+| R4 同动作去重 | 相邻 keep/keep 或 cut/cut 自动合并 |
+
+向用户展示验证变更摘要：
+
+```text
+┌─────────────────────────────────────┐
+│ 验证修正（代码强制）                  │
+│ {n} 处变更                            │
+│ • R1 首句保护: [{t}-{t}] 强制保留    │
+│ • R2 短段合并: [{t}-{t}] → 下一段     │
+│ • R3 裁剪超限: 恢复 {n} 段            │
+│                                      │
+│ 保留: {n}s ({n}%)  裁剪: {n}s        │
+└─────────────────────────────────────┘
+```
+
 ### Step 4 — 用户确认
 
 展示裁剪预览给用户：

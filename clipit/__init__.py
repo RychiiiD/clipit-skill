@@ -28,3 +28,7 @@ class Clipit:
     def clean(self, input_path: str, output_path: str = None) -> dict:
         from .clean import clean_transcript
         return clean_transcript(input_path, output_path)
+
+    def validate(self, input_path: str, output_path: str = None, intensity: str = "medium") -> dict:
+        from .validate import validate_file
+        return validate_file(input_path, output_path, intensity=intensity)

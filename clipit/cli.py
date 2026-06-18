@@ -112,6 +112,18 @@ def cmd_clean(args):
     })
 
 
+def cmd_validate(args):
+    from .validate import validate_file
+    result = validate_file(args.input, args.output, intensity=args.intensity)
+    _print({
+        "status": "ok",
+        "input": args.input,
+        "output": args.output or args.input,
+        "changes": len(result["changes"]),
+        "stats": result["stats"],
+    })
+
+
 def main():
     parser = argparse.ArgumentParser(prog="clipit")
     sub = parser.add_subparsers(dest="command")
@@ -139,6 +151,14 @@ def main():
     p_c.add_argument("input", help="Path to transcript JSON")
     p_c.add_argument("-o", "--output", help="Output path (defaults to input if omitted)")
 
+    # validate
+    p_v = sub.add_parser("validate", help="Apply hard validation rules to LLM decisions")
+    p_v.add_argument("input", help="Path to decisions JSON")
+    p_v.add_argument("-o", "--output", help="Output path (defaults to input if omitted)")
+    p_v.add_argument("-i", "--intensity", default="medium",
+                     choices=["loose", "medium", "strict", "aggressive"],
+                     help="Validation intensity preset")
+
     args = parser.parse_args()
     if args.command == "check":
         cmd_check(args)
@@ -150,6 +170,8 @@ def main():
         cmd_splice(args)
     elif args.command == "clean":
         cmd_clean(args)
+    elif args.command == "validate":
+        cmd_validate(args)
     else:
         parser.print_help()
         sys.exit(1)
