@@ -24,13 +24,19 @@ def _find_ffmpeg() -> str:
 _FFMPEG = _find_ffmpeg()
 
 
-def splice(video_path: str, decisions: list, output_path: str = None) -> str:
+def splice(video_path: str, decisions: list, output_path: str = None,
+           reorder: bool = False) -> str:
     """Splice video by keeping only segments marked 'keep'.
 
     Args:
         video_path: Path to input video file.
         decisions: List of {start, end, action} dicts.
+                   When a keep segment has an optional "order" int,
+                   setting reorder=True uses that value to determine
+                   output sequence instead of chronological order.
         output_path: Output video path. Auto-generated if None.
+        reorder: If True and keep segments have "order" field,
+                 sort by order instead of start time.
 
     Returns:
         Path to the output video file.
@@ -38,6 +44,11 @@ def splice(video_path: str, decisions: list, output_path: str = None) -> str:
     keep_segments = [d for d in decisions if d["action"] == "keep"]
     if not keep_segments:
         raise ValueError("No segments to keep — nothing to output.")
+
+    if reorder and any("order" in d for d in keep_segments):
+        keep_segments = sorted(keep_segments, key=lambda d: (d.get("order", 9999), d["start"]))
+    else:
+        keep_segments = sorted(keep_segments, key=lambda d: d["start"])
 
     if output_path is None:
         base, ext = os.path.splitext(video_path)

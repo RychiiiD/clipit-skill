@@ -96,7 +96,7 @@ def cmd_splice(args):
     with open(args.decisions, "r", encoding="utf-8") as f:
         decisions = json.load(f)
 
-    output_path = splice(args.video, decisions, args.output)
+    output_path = splice(args.video, decisions, args.output, reorder=args.reorder)
     _print({"status": "ok", "output": output_path})
 
 
@@ -145,6 +145,8 @@ def main():
     p_s.add_argument("video", help="Path to video file")
     p_s.add_argument("-d", "--decisions", required=True, help="Path to decisions JSON")
     p_s.add_argument("-o", "--output", help="Output video path")
+    p_s.add_argument("--reorder", action="store_true",
+                     help="Sort output by keep segment 'order' field instead of chronological")
 
     # clean
     p_c = sub.add_parser("clean", help="Clean transcript text (fillers, repetitions, stutters)")
