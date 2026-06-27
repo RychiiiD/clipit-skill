@@ -22,7 +22,28 @@ _PRESETS = {
 }
 
 
-def validate(decisions: list, intensity: str = "medium", transcript_duration: float = None) -> dict:
+# ── Blacklist patterns for R7 (课宣/禁止内容) ───────────────────────────────
+_BLACKLIST_PATTERNS = [
+    "拍下立减", "限时抢购", "错过今天", "手慢无",
+    "限量发售", "仅此一天",
+]
+
+
+def _text_for_range(segments, start, end):
+    """Join transcript text within [start, end) time range."""
+    parts = []
+    for seg in segments:
+        s, e, t = seg["start"], seg["end"], seg.get("text", "")
+        if s >= end:
+            break
+        if e > start and s < end:
+            parts.append(t)
+    return "".join(parts)
+
+
+def validate(decisions: list, intensity: str = "medium",
+             transcript_duration: float = None,
+             transcript_segments: list = None) -> dict:
     """Apply hard-coded rules to fix LLM decisions.
 
     Args:
@@ -30,6 +51,8 @@ def validate(decisions: list, intensity: str = "medium", transcript_duration: fl
         intensity: "loose" | "medium" | "strict" | "aggressive".
         transcript_duration: Total video duration in seconds.
                            Auto-computed if not provided.
+        transcript_segments: List of {"start","end","text"} from cleaned
+                           transcript. Required for R7/R8 content checks.
 
     Returns:
         Dict with keys:
@@ -51,7 +74,9 @@ def validate(decisions: list, intensity: str = "medium", transcript_duration: fl
     if decs:
         r1_changes = []
         dur0 = round(decs[0]["end"] - decs[0]["start"], 2)
-        if decs[0]["action"] == "cut" and 2.0 < dur0 <= 20.0:
+        # Only protect short gaps (2-5s) at position 0 — longer pre-content
+        # (audience questions, banter) is intentionally skipped, not a cut hook.
+        if decs[0]["action"] == "cut" and 2.0 < dur0 <= 5.0:
             decs[0]["action"] = "keep"
             decs[0]["reason"] = "开篇定题"
             r1_changes.append(f"段[{decs[0]['start']:.1f}-{decs[0]['end']:.1f}]")
@@ -184,6 +209,60 @@ def validate(decisions: list, intensity: str = "medium", transcript_duration: fl
                         decs[i]["reason"] = "内容保留"
                 i += 1
 
+    # ── R7: Blacklist content check (课宣/禁止内容) ─────────────────────────
+    # Auto-cut keep segments containing known blacklisted phrases.
+    if transcript_segments:
+        for d in decs:
+            if d["action"] != "keep":
+                continue
+            text = _text_for_range(transcript_segments, d["start"], d["end"])
+            for pat in _BLACKLIST_PATTERNS:
+                if pat in text:
+                    changes.append({
+                        "rule": "R7",
+                        "description": f"禁止内容: [{d['start']:.1f}-{d['end']:.1f}] 含'{pat}'，强制裁掉",
+                    })
+                    d["action"] = "cut"
+                    d["reason"] = "跑题"
+                    break
+
+    # ── R8: Cross-segment semantic dedup ───────────────────────────────────
+    # If two non-adjacent keep segments share >60% of the later segment's
+    # distinctive content (measured by 6+ char substring overlap), the later
+    # segment is semantically redundant — cut it.
+    # Thresholds: require both (a) >=2 matching substrings AND (b) matching
+    # chars cover >60% of the shorter segment's text.
+    if transcript_segments:
+        keep_segs = [(i, d) for i, d in enumerate(decs) if d["action"] == "keep"]
+        for i in range(len(keep_segs)):
+            for j in range(i + 1, len(keep_segs)):
+                idx_j, dj = keep_segs[j]
+                if decs[idx_j]["action"] != "keep":
+                    continue
+                idx_i, di = keep_segs[i]
+                ti = _text_for_range(transcript_segments, di["start"], di["end"])
+                tj = _text_for_range(transcript_segments, dj["start"], dj["end"])
+                # Find 6+ char substrings shared between both texts
+                shared = set()
+                for k in range(len(ti) - 5):
+                    sub = ti[k:k+6]
+                    if sub in tj:
+                        shared.add(sub)
+                if not shared:
+                    continue
+                # Check overlap ratio: what fraction of later segment's text
+                # is covered by the matching substrings?
+                covered = sum(len(s) for s in shared)
+                shorter_len = min(len(ti), len(tj))
+                ratio = covered / shorter_len if shorter_len > 0 else 0
+                if ratio > 0.6 and len(shared) >= 2:
+                    changes.append({
+                        "rule": "R8",
+                        "description": f"跨段重复: [{dj['start']:.1f}-{dj['end']:.1f}] ↔ [{di['start']:.1f}-{di['end']:.1f}] 重叠{ratio:.0%}，裁掉后段",
+                    })
+                    decs[idx_j]["action"] = "cut"
+                    decs[idx_j]["reason"] = "内容重复"
+
     # ── R3: Cut ratio limit ────────────────────────────────────────────────
     # If cut percentage exceeds max_cut_pct, restore cut segments starting
     # from the most marginal ones (those with "跑题" reason).
@@ -249,7 +328,21 @@ def validate_file(input_path: str, output_path: str = None,
     with open(input_path, encoding="utf-8") as f:
         decisions = json.load(f)
 
-    result = validate(decisions, intensity=intensity)
+    # Auto-discover transcript for R7/R8 content checks
+    import os
+    script_dir = os.path.dirname(os.path.abspath(input_path))
+    transcript_path = os.path.join(script_dir, "transcript_clean.json")
+    if not os.path.exists(transcript_path):
+        # Fall back to default project path
+        transcript_path = "data/process-data/transcript_clean.json"
+    transcript_segments = None
+    if os.path.exists(transcript_path):
+        with open(transcript_path, encoding="utf-8") as f:
+            td = json.load(f)
+        transcript_segments = td.get("segments", td if isinstance(td, list) else [])
+
+    result = validate(decisions, intensity=intensity,
+                      transcript_segments=transcript_segments)
     out = result["decisions"]
 
     if output_path:
