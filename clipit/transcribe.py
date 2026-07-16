@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import tempfile
+import time
 
 
 def extract_audio(video_path: str, output_wav: str) -> None:
@@ -59,6 +60,11 @@ def transcribe(video_path: str, model_name: str = "small") -> dict:
             "language": result.get("language", "unknown"),
             "duration": round(segments[-1]["end"], 2) if segments else 0,
             "model": model_name,
+            "source_file": os.path.abspath(video_path),
+            "source_size": os.path.getsize(video_path),
+            "source_mtime": time.strftime(
+                "%Y-%m-%dT%H:%M:%S", time.gmtime(os.path.getmtime(video_path))
+            ),
         }
     finally:
         # Cleanup temp files

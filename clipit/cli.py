@@ -115,12 +115,27 @@ def cmd_clean(args):
 def cmd_validate(args):
     from .validate import validate_file
     result = validate_file(args.input, args.output, intensity=args.intensity)
-    _print({
+    output = {
         "status": "ok",
         "input": args.input,
         "output": args.output or args.input,
         "changes": len(result["changes"]),
         "stats": result["stats"],
+    }
+    # Include R9 warnings in output
+    r9_checks = [c for c in result["changes"] if c["rule"] == "R9"]
+    if r9_checks:
+        output["warnings"] = [c["description"] for c in r9_checks]
+    _print(output)
+
+
+def cmd_split(args):
+    from .validate import split_decisions
+    result = split_decisions(args.input, args.output_dir)
+    _print({
+        "status": "ok",
+        "input": args.input,
+        "outputs": result,
     })
 
 
@@ -161,6 +176,11 @@ def main():
                      choices=["loose", "medium", "strict", "aggressive"],
                      help="Validation intensity preset")
 
+    # split
+    p_sp = sub.add_parser("split", help="Split multi-video decisions into per-video files")
+    p_sp.add_argument("input", help="Path to combined decisions JSON")
+    p_sp.add_argument("-o", "--output-dir", help="Output directory (defaults to input file's directory)")
+
     args = parser.parse_args()
     if args.command == "check":
         cmd_check(args)
@@ -174,6 +194,8 @@ def main():
         cmd_clean(args)
     elif args.command == "validate":
         cmd_validate(args)
+    elif args.command == "split":
+        cmd_split(args)
     else:
         parser.print_help()
         sys.exit(1)
