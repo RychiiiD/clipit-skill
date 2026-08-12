@@ -391,24 +391,84 @@ def validate(decisions: list, intensity: str = "medium",
     }
 
 
+def _decisions_stem(input_path: str) -> str:
+    """Extract the topic/video id from a decisions filename.
+
+    ``decisions_0812_validated_video1.json`` → ``0812``
+    ``decisions_创业的真实面目.json`` → ``创业的真实面目``
+    ``decisions.json`` → ``""``
+    """
+    base = os.path.splitext(os.path.basename(input_path))[0]
+    if not base.startswith("decisions"):
+        return ""
+    stem = base[len("decisions"):].lstrip("_")
+    for suffix in ("_validated", "_video"):
+        idx = stem.find(suffix)
+        if idx != -1:
+            stem = stem[:idx]
+            break
+    return stem
+
+
+def _resolve_transcript_path(input_path: str, explicit_path: str = None) -> str:
+    """Resolve which cleaned transcript to use for a decisions file.
+
+    Matching order:
+    1. explicit_path (if given)
+    2. Same-dir ``transcript_{id}_clean.json`` where id is the decisions stem
+    3. Same-dir ``transcript_clean.json`` (legacy single-video default)
+    4. ``data/process-data/transcript_clean.json`` (legacy fallback)
+
+    Returns (path, warning) where warning is a short note if we had to fall
+    back instead of finding a name-matched transcript.
+    """
+    if explicit_path:
+        return explicit_path, None
+    script_dir = os.path.dirname(os.path.abspath(input_path))
+    stem = _decisions_stem(input_path)
+    if stem:
+        matched = os.path.join(script_dir, f"transcript_{stem}_clean.json")
+        if os.path.exists(matched):
+            return matched, None
+    default = os.path.join(script_dir, "transcript_clean.json")
+    if os.path.exists(default):
+        return default, (f"未找到 transcript_{stem}_clean.json，回退到默认 {default}；"
+                         f"若该 decisions 对应其他视频，R7/R8/R9 可能跳过")
+    legacy = "data/process-data/transcript_clean.json"
+    if os.path.exists(legacy):
+        return legacy, f"未找到同目录 transcript_clean.json，回退到 {legacy}；R7/R8/R9 可能不匹配"
+    return "", "未找到任何 transcript_clean.json，R7/R8/R9 将跳过"
+
+
 def validate_file(input_path: str, output_path: str = None,
-                  intensity: str = "medium") -> dict:
-    """Read decisions JSON from file, validate, write back."""
+                  intensity: str = "medium",
+                  transcript_path: str = None) -> dict:
+    """Read decisions JSON from file, validate, write back.
+
+    Args:
+        input_path: Path to decisions JSON.
+        output_path: Output path (defaults to input if omitted).
+        intensity: Validation intensity preset.
+        transcript_path: Optional explicit path to the cleaned transcript.
+            If omitted, auto-resolved from the decisions filename
+            (``transcript_{stem}_clean.json`` in the same dir).
+    """
     with open(input_path, encoding="utf-8") as f:
         decisions = json.load(f)
 
-    script_dir = os.path.dirname(os.path.abspath(input_path))
-    transcript_path = os.path.join(script_dir, "transcript_clean.json")
-    if not os.path.exists(transcript_path):
-        transcript_path = "data/process-data/transcript_clean.json"
+    transcript_path, warning = _resolve_transcript_path(input_path, transcript_path)
     transcript_segments = None
-    if os.path.exists(transcript_path):
+    transcript_duration = None
+    if transcript_path and os.path.exists(transcript_path):
         with open(transcript_path, encoding="utf-8") as f:
             td = json.load(f)
         transcript_segments = td.get("segments", td if isinstance(td, list) else [])
+        if isinstance(td, dict):
+            transcript_duration = td.get("duration")
 
     result = validate(decisions, intensity=intensity,
-                      transcript_segments=transcript_segments)
+                      transcript_segments=transcript_segments,
+                      transcript_duration=transcript_duration)
     out = result["decisions"]
 
     if output_path:
@@ -418,6 +478,9 @@ def validate_file(input_path: str, output_path: str = None,
         with open(input_path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, indent=2)
 
+    if warning:
+        result["transcript_warning"] = warning
+    result["transcript_path"] = transcript_path
     return result
 
 

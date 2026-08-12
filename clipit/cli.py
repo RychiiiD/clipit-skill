@@ -114,7 +114,8 @@ def cmd_clean(args):
 
 def cmd_validate(args):
     from .validate import validate_file
-    result = validate_file(args.input, args.output, intensity=args.intensity)
+    result = validate_file(args.input, args.output, intensity=args.intensity,
+                           transcript_path=args.transcript)
     output = {
         "status": "ok",
         "input": args.input,
@@ -122,6 +123,11 @@ def cmd_validate(args):
         "changes": len(result["changes"]),
         "stats": result["stats"],
     }
+    # Include transcript resolution info so callers can detect skipped rules
+    if result.get("transcript_path"):
+        output["transcript"] = result["transcript_path"]
+    if result.get("transcript_warning"):
+        output["transcript_warning"] = result["transcript_warning"]
     # Include R9 warnings in output
     r9_checks = [c for c in result["changes"] if c["rule"] == "R9"]
     if r9_checks:
@@ -175,6 +181,9 @@ def main():
     p_v.add_argument("-i", "--intensity", default="medium",
                      choices=["loose", "medium", "strict", "aggressive"],
                      help="Validation intensity preset")
+    p_v.add_argument("-t", "--transcript", help="Path to cleaned transcript JSON. "
+                     "If omitted, auto-resolved from the decisions filename "
+                     "(transcript_{stem}_clean.json in the same dir)")
 
     # split
     p_sp = sub.add_parser("split", help="Split multi-video decisions into per-video files")
